@@ -1,35 +1,17 @@
 cmake_minimum_required(VERSION 3.0)
 project(ModularLink)
 
-set(ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
-set(BUILD_DIR ${CMAKE_BINARY_DIR})
-set(MODULES_DIR ${ROOT_DIR}/modules)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-include(${MODULES_DIR}/link/AbletonLinkConfig.cmake)
+include(modules/link/AbletonLinkConfig.cmake)
+include_directories(${link_HEADERS})
 
-set(HEADERS
-  src/AudioEngine.hpp
-  src/AudioPlatform_Portaudio.hpp
-  ${link_HEADERS}
-)
-
-set(SOURCES
-  src/AudioEngine.cpp
-  src/AudioPlatform_Portaudio.cpp
+set(SRC
   src/main.cpp
+  src/Max7219.cpp
 )
+add_executable(ModularLink ${SRC})
 
-add_executable(ModularLink
-  ${HEADERS}
-  ${SOURCES}
-)
-
-target_compile_options(ModularLink PRIVATE -w)
-
-target_link_libraries(ModularLink wiringPi)
-target_link_libraries(ModularLink asound portaudio wiringPi)
-target_link_libraries(ModularLink atomic pthread)
+target_link_libraries(ModularLink pthread)
 target_link_libraries(ModularLink Ableton::Link)
-
-source_group("ModularLink" FILES ${HEADERS} ${SOURCES})
-
+target_link_libraries(ModularLink wiringPi)

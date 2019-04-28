@@ -1,269 +1,212 @@
-/* Copyright 2016, Ableton AG, Berlin. All rights reserved.
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  If you would like to incorporate Link into a proprietary software application,
- *  please contact <link-devs@ableton.com>.
- */
-
-#include "AudioPlatform_Portaudio.hpp"
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <thread>
-#if defined(LINK_PLATFORM_UNIX)
-#include <termios.h>
-#endif
+#include <ableton/Link.hpp>
 
-#include <wiringPi.h>
+extern "C" {
+    #include <wiringPi.h>
+}
+#include "Max7219.h"
 
-namespace
-{
+using namespace std;
 
-const unsigned kPinPWM1{1};  // BCM 18
-const unsigned kPinPWM2{23}; // BCM 13
-const unsigned kPinLedRunning{11}; // BCM 7
+namespace {
 
-//#define DATA        0 // GPIO 17 (WiringPi pin num 0)  header pin 11
-//#define CLOCK       3 // GPIO 22 (WiringPi pin num 3)  header pin 15
-//#define LOAD        4 // GPIO 23 (WiringPi pin num 4)  header pin 16
+  const double PULSES_PER_BEAT = 4.0;
+  const double PULSE_LENGTH = 0.02; // seconds
+  const double QUANTUM = 4;
 
-#define DATA        12 // GPIO 10 (WiringPi pin num 12)  header pin 19
-#define CLOCK       14 // GPIO 11 (WiringPi pin num 14)  header pin 23
-#define LOAD        10 // GPIO  8 (WiringPi pin num 10)  header pin 24
+  float clock_div = 1.0; // clock division for supporting volca/eurorack/etc, multiply by PULSES_PER_BEAT
 
-// The Max7219 Registers :
+  // for first command line argument to set clock division
+  enum ClockDivModes {
+      Sixteenth = 0,
+      Eighth,
+      Quarter,
+      NUM_CLOCK_DIVS
+  };
 
-#define DECODE_MODE   0x09
-#define INTENSITY     0x0a
-#define SCAN_LIMIT    0x0b
-#define SHUTDOWN      0x0c
-#define DISPLAY_TEST  0x0f
+  int selectedClockDiv = Sixteenth;
 
-struct State
-{
-  std::atomic<bool> running;
-  ableton::Link link;
-  ableton::linkaudio::AudioPlatform audioPlatform;
+  // Using WiringPi numbering scheme
+  enum InPin {
+      PlayStop = 21,
+      ClockDiv = 22
+  };
 
-  State()
-    : running(true)
-    , link(120.)
-    , audioPlatform(link)
-  {
-    link.enable(true);
+  enum OutPin {
+      Clock = 1,
+      Reset = 23,
+      PlayIndicator = 11
+  };
+
+  enum PlayState {
+      Stopped,
+      Cued,
+      Playing
+  };
+
+  struct State {
+      ableton::Link link;
+      std::atomic<bool> running;
+      std::atomic<bool> playPressed;
+      std::atomic<PlayState> playState;
+      std::atomic<bool> clockDivPressed;
+
+      State()
+        : link(120.0)
+        , running(true)
+        , playPressed(false)
+        , playState(Stopped)
+        , clockDivPressed(false)
+      {
+        link.enable(true);
+      }
+  };
+
+  void configurePins() {
+      wiringPiSetup();
+      pinMode(PlayStop, INPUT);
+      pullUpDnControl(PlayStop, PUD_DOWN);
+      pinMode(ClockDiv, INPUT);
+      pullUpDnControl(ClockDiv, PUD_DOWN);
+      pinMode(Clock, OUTPUT);
+      pinMode(Reset, OUTPUT);
+      pinMode(PlayIndicator, OUTPUT);
   }
-};
 
-void disableBufferedInput()
-{
-#if defined(LINK_PLATFORM_UNIX)
-  termios t;
-  tcgetattr(STDIN_FILENO, &t);
-  t.c_lflag &= static_cast<unsigned long>(~ICANON);
-  tcsetattr(STDIN_FILENO, TCSANOW, &t);
-#endif
-}
+  void clearLine() {
+      std::cout << "   \r" << std::flush;
+      std::cout.fill(' ');
+  }
 
-void enableBufferedInput()
-{
-#if defined(LINK_PLATFORM_UNIX)
-  termios t;
-  tcgetattr(STDIN_FILENO, &t);
-  t.c_lflag |= ICANON;
-  tcsetattr(STDIN_FILENO, TCSANOW, &t);
-#endif
-}
-
-void clearLine()
-{
-  std::cout << "   \r" << std::flush;
-  std::cout.fill(' ');
-}
-
-void printHelp()
-{
-  std::cout << std::endl << " < L I N K  H U T >" << std::endl << std::endl;
-  std::cout << "usage:" << std::endl;
-  std::cout << "  start / stop: p" << std::endl;
-  std::cout << "  decrease / increase tempo: w / e" << std::endl;
-  std::cout << "  decrease / increase quantum: r / t" << std::endl;
-  std::cout << "  enable / disable start stop sync: s" << std::endl;
-  std::cout << "  quit: q" << std::endl << std::endl;
-}
-
-void printState(const std::chrono::microseconds time,
-  const ableton::Link::SessionState sessionState,
-  const std::size_t numPeers,
-  const bool isPlaying,
-  const double quantum,
-  const bool startStopSyncOn)
-{
-  const auto beats = sessionState.beatAtTime(time, quantum);
-  const auto phase = sessionState.phaseAtTime(time, quantum);
-  const auto startStop = startStopSyncOn ? "on" : "off";
-  std::cout << std::defaultfloat << "peers: " << numPeers << " | "
-            << "playing: " << (isPlaying ? "on" : "off") << " | "
-            << "quantum: " << quantum << " | "
-            << "start stop sync: " << startStop << " | "
-            << "tempo: " << sessionState.tempo() << " | " << std::fixed
-            << "beats: " << beats << " | ";
-  for (int i = 0; i < ceil(quantum); ++i)
+  void printState(State& state)
   {
-    if (i < phase)
-    {
-      std::cout << 'X';
+      const auto time = state.link.clock().micros();
+      const auto sessionState = state.link.captureAppSessionState();
+      const auto beats = sessionState.beatAtTime(time, QUANTUM);
+      const auto phase = sessionState.phaseAtTime(time, QUANTUM);
+      std::cout << "tempo: " << sessionState.tempo()
+          << " | " << std::fixed << "beats: " << beats
+          << " | " << std::fixed << "phase: " << phase;
+      clearLine();
+  }
+
+  void outputClock(double beats, double phase, double tempo) {
+      const double secondsPerBeat = 60.0 / tempo;
+
+      // Fractional portion of current beat value
+      double intgarbage;
+      const auto beatFraction = std::modf(beats * PULSES_PER_BEAT * clock_div, &intgarbage);
+
+      // Fractional beat value for which clock should be high
+      const auto highFraction = PULSE_LENGTH / secondsPerBeat;
+
+      const bool resetHigh = (phase <= highFraction);
+      digitalWrite(Reset, resetHigh ? LOW : HIGH);
+
+      const bool clockHigh = (beatFraction <= highFraction);
+      digitalWrite(Clock, clockHigh ? LOW : HIGH);
+  }
+
+  void input(State& state) {
+      while (state.running) {
+
+          const bool clockDivPressed = digitalRead(ClockDiv) == HIGH;
+          const bool playPressed = digitalRead(PlayStop) == HIGH;
+          if (playPressed && !state.playPressed) {
+              switch (state.playState) {
+                  case Stopped:
+                      state.playState.store(Cued);
+                      break;
+                  case Cued:
+                  case Playing:
+                      state.playState.store(Stopped);
+                      break;
+              }
+          }
+
+          if (clockDivPressed && !state.clockDivPressed) {
+              selectedClockDiv = (selectedClockDiv + 1) % NUM_CLOCK_DIVS;
+              switch (selectedClockDiv) {
+                  case Sixteenth:
+                      clock_div = 1.0;
+                      break;
+                  case Eighth:
+                      clock_div = 0.5;
+                      break;
+                  case Quarter:
+                      clock_div = 0.25;
+                      break;
+                  default:
+                      clock_div = 1.0;
+                      break;
+              }
+          }
+          state.playPressed.store(playPressed);
+          state.clockDivPressed.store(clockDivPressed);
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+  }
+
+  void output(State& state) {
+      while (state.running) {
+          const auto time = state.link.clock().micros();
+          auto sessionState = state.link.captureAppSessionState();
+
+          const double beats = sessionState.beatAtTime(time, QUANTUM);
+          const double phase = sessionState.phaseAtTime(time, QUANTUM);
+          const double tempo = sessionState.tempo();
+
+          switch (state.playState) {
+              case Cued: {
+                      // Tweak this
+                      const bool playHigh = (long)(beats * 2) % 2 == 0;
+                      digitalWrite(PlayIndicator, playHigh ? HIGH : LOW);
+                      if (phase <= 0.01) {
+                          state.playState.store(Playing);
+                      }
+                  break;
+              }
+              case Playing:
+                  digitalWrite(PlayIndicator, HIGH);
+                  outputClock(beats, phase, tempo);
+                  break;
+              default:
+                  digitalWrite(PlayIndicator, LOW);
+                  break;
+          }
+
+          std::this_thread::sleep_for(std::chrono::microseconds(250));
+      }
+  }
+}
+
+int main(void) {
+    configurePins();
+    Max7219 max7219;
+    State state;
+
+    std::thread inputThread(input, std::ref(state));
+    std::thread outputThread(output, std::ref(state));
+
+    state.link.setTempoCallback([&](double bpm) {
+      max7219.display(bpm);
+    });
+
+    max7219.display(10000.0);
+
+    while (state.running) {
+        //printState(state);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    else
-    {
-      std::cout << 'O';
-    }
-  }
-  clearLine();
 
-  // set LED
-  digitalWrite(kPinLedRunning, isPlaying ? 1 : 0);
+    inputThread.join();
+    outputThread.join();
+
+    return 0;
 }
 
-void input(State& state)
-{
-  char in;
-
-#if defined(LINK_PLATFORM_WINDOWS)
-  HANDLE stdinHandle = GetStdHandle(STD_INPUT_HANDLE);
-  DWORD numCharsRead;
-  INPUT_RECORD inputRecord;
-  do
-  {
-    ReadConsoleInput(stdinHandle, &inputRecord, 1, &numCharsRead);
-  } while ((inputRecord.EventType != KEY_EVENT) || inputRecord.Event.KeyEvent.bKeyDown);
-  in = inputRecord.Event.KeyEvent.uChar.AsciiChar;
-#elif defined(LINK_PLATFORM_UNIX)
-  in = static_cast<char>(std::cin.get());
-#endif
-
-  const auto tempo = state.link.captureAppSessionState().tempo();
-  auto& engine = state.audioPlatform.mEngine;
-
-  switch (in)
-  {
-  case 'q':
-    state.running = false;
-    clearLine();
-    return;
-  case 'w':
-    engine.setTempo(tempo - 1);
-    break;
-  case 'e':
-    engine.setTempo(tempo + 1);
-    break;
-  case 'r':
-    engine.setQuantum(engine.quantum() - 1);
-    break;
-  case 't':
-    engine.setQuantum(std::max(1., engine.quantum() + 1));
-    break;
-  case 's':
-    engine.setStartStopSyncEnabled(!engine.isStartStopSyncEnabled());
-    break;
-  case 'p':
-    if (engine.isPlaying())
-    {
-      engine.stopPlaying();
-    }
-    else
-    {
-      engine.startPlaying();
-    }
-    break;
-  }
-
-  input(state);
-}
-
-} // namespace
-
-
-static void MAX7219_Send16bits (unsigned short output)
-{
-  unsigned char i;
-  for (i=16; i>0; i--) {
-    unsigned short mask = 1 << (i - 1); // calculate bitmask
-    digitalWrite(CLOCK, 0);  // set clock to 0
-    // Send one bit on the data pin
-    if (output & mask)
-      digitalWrite(DATA, 1);
-    else
-      digitalWrite(DATA, 0);
-    digitalWrite(CLOCK, 1);  // set clock to 1
-  }
-}
-
-static void MAX7219_Send (unsigned char reg_number, unsigned char dataout)
-{
-  digitalWrite(LOAD, 1);  // set LOAD 1 to start
-  MAX7219_Send16bits((reg_number << 8) + dataout);
-  digitalWrite(LOAD, 0);  // LOAD 0 to latch
-  digitalWrite(LOAD, 1);  // set LOAD 1 to finish
-}
-
-static void MAX7219_Init (void)
-{
-  pinMode(DATA, 1);               // OUTPUT
-  pinMode(CLOCK, 1);              // OUTPUT
-  pinMode(LOAD, 1);               // OUTPUT
-  MAX7219_Send(SCAN_LIMIT, 7);     // set up to scan all eight digits
-  MAX7219_Send(DECODE_MODE, 0xFF); // Set BCD decode mode on
-  MAX7219_Send(DISPLAY_TEST, 0);   // Disable test mode
-  MAX7219_Send(INTENSITY, 0);      // set brightness 0 to 15
-  MAX7219_Send(SHUTDOWN, 1);       // come out of shutdown mode / turn on the digits
-}
-
-int main(int, char**)
-{
-  State state;
-  printHelp();
-  std::thread thread(input, std::ref(state));
-  disableBufferedInput();
-
-  if (wiringPiSetup () == -1) exit (1) ;
-  // setup pwm pins (clock & reset)
-  pinModeAlt(kPinPWM1, 2); // ALT5
-  pinModeAlt(kPinPWM2, 4); // ALT0
-  pinMode(kPinLedRunning, 1); // OUTPUT
-
-  // Display
-  MAX7219_Init();
-  MAX7219_Send(4,'1');
-  MAX7219_Send(3,'2');
-  MAX7219_Send(2,'3');
-  MAX7219_Send(1,'4');
-
-  while (state.running)
-  {
-    const auto time = state.link.clock().micros();
-    auto sessionState = state.link.captureAppSessionState();
-    printState(time, sessionState, state.link.numPeers(),
-      state.audioPlatform.mEngine.isPlaying(),
-      state.audioPlatform.mEngine.quantum(),
-      state.audioPlatform.mEngine.isStartStopSyncEnabled());
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
-
-  enableBufferedInput();
-  thread.join();
-  return 0;
-}
