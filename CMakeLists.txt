@@ -10,6 +10,7 @@ set(SRC
   src/main.cpp
   src/Max7219.cpp
   src/Input.cpp
+  src/Output.cpp
 )
 add_executable(ModularLink ${SRC})
 

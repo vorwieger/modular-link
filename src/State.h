@@ -20,12 +20,14 @@ struct State {
     std::atomic<bool> running;
     std::atomic<PlayState> playState;
     std::atomic<ClockDivMode> clockDivMode;
+    std::atomic<int> quantum;
 
     State()
       : link(120.0)
       , running(true)
       , playState(Stopped)
       , clockDivMode(Quarter)
+      , quantum(4)
     {
       link.enable(true);
     }
