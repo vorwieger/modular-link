@@ -4,11 +4,15 @@
 #include <cmath>
 #include <iostream>
 #include <thread>
+#include <bitset>
 #include <ableton/Link.hpp>
 
 extern "C" {
     #include <wiringPi.h>
 }
+
+#include "State.h"
+#include "Input.h"
 #include "Max7219.h"
 
 using namespace std;
@@ -19,64 +23,11 @@ namespace {
   const double PULSE_LENGTH = 0.02; // seconds
   const double QUANTUM = 4;
 
-  float clock_div = 1.0; // clock division for supporting volca/eurorack/etc, multiply by PULSES_PER_BEAT
-
-  // for first command line argument to set clock division
-  enum ClockDivModes {
-      Sixteenth = 0,
-      Eighth,
-      Quarter,
-      NUM_CLOCK_DIVS
-  };
-
-  int selectedClockDiv = Sixteenth;
-
-  // Using WiringPi numbering scheme
-  enum InPin {
-      PlayStop = 21,
-      ClockDiv = 22
-  };
-
   enum OutPin {
       Clock = 1,
       Reset = 23,
       PlayIndicator = 11
   };
-
-  enum PlayState {
-      Stopped,
-      Cued,
-      Playing
-  };
-
-  struct State {
-      ableton::Link link;
-      std::atomic<bool> running;
-      std::atomic<bool> playPressed;
-      std::atomic<PlayState> playState;
-      std::atomic<bool> clockDivPressed;
-
-      State()
-        : link(120.0)
-        , running(true)
-        , playPressed(false)
-        , playState(Stopped)
-        , clockDivPressed(false)
-      {
-        link.enable(true);
-      }
-  };
-
-  void configurePins() {
-      wiringPiSetup();
-      pinMode(PlayStop, INPUT);
-      pullUpDnControl(PlayStop, PUD_DOWN);
-      pinMode(ClockDiv, INPUT);
-      pullUpDnControl(ClockDiv, PUD_DOWN);
-      pinMode(Clock, OUTPUT);
-      pinMode(Reset, OUTPUT);
-      pinMode(PlayIndicator, OUTPUT);
-  }
 
   void clearLine() {
       std::cout << "   \r" << std::flush;
@@ -95,12 +46,12 @@ namespace {
       clearLine();
   }
 
-  void outputClock(double beats, double phase, double tempo) {
+  void outputClock(double beats, double phase, double tempo, float clockDiv) {
       const double secondsPerBeat = 60.0 / tempo;
 
       // Fractional portion of current beat value
       double intgarbage;
-      const auto beatFraction = std::modf(beats * PULSES_PER_BEAT * clock_div, &intgarbage);
+      const auto beatFraction = std::modf(beats * PULSES_PER_BEAT * clockDiv, &intgarbage);
 
       // Fractional beat value for which clock should be high
       const auto highFraction = PULSE_LENGTH / secondsPerBeat;
@@ -110,46 +61,6 @@ namespace {
 
       const bool clockHigh = (beatFraction <= highFraction);
       digitalWrite(Clock, clockHigh ? LOW : HIGH);
-  }
-
-  void input(State& state) {
-      while (state.running) {
-
-          const bool clockDivPressed = digitalRead(ClockDiv) == HIGH;
-          const bool playPressed = digitalRead(PlayStop) == HIGH;
-          if (playPressed && !state.playPressed) {
-              switch (state.playState) {
-                  case Stopped:
-                      state.playState.store(Cued);
-                      break;
-                  case Cued:
-                  case Playing:
-                      state.playState.store(Stopped);
-                      break;
-              }
-          }
-
-          if (clockDivPressed && !state.clockDivPressed) {
-              selectedClockDiv = (selectedClockDiv + 1) % NUM_CLOCK_DIVS;
-              switch (selectedClockDiv) {
-                  case Sixteenth:
-                      clock_div = 1.0;
-                      break;
-                  case Eighth:
-                      clock_div = 0.5;
-                      break;
-                  case Quarter:
-                      clock_div = 0.25;
-                      break;
-                  default:
-                      clock_div = 1.0;
-                      break;
-              }
-          }
-          state.playPressed.store(playPressed);
-          state.clockDivPressed.store(clockDivPressed);
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
   }
 
   void output(State& state) {
@@ -173,7 +84,7 @@ namespace {
               }
               case Playing:
                   digitalWrite(PlayIndicator, HIGH);
-                  outputClock(beats, phase, tempo);
+                  outputClock(beats, phase, tempo, state.clockDivValue());
                   break;
               default:
                   digitalWrite(PlayIndicator, LOW);
@@ -186,25 +97,27 @@ namespace {
 }
 
 int main(void) {
-    configurePins();
+    wiringPiSetup();
+    piHiPri(99);
+    pinMode(Clock, OUTPUT);
+    pinMode(Reset, OUTPUT);
+    pinMode(PlayIndicator, OUTPUT);
+
     Max7219 max7219;
     State state;
 
-    std::thread inputThread(input, std::ref(state));
+    Input input(state);
     std::thread outputThread(output, std::ref(state));
 
     state.link.setTempoCallback([&](double bpm) {
       max7219.display(bpm);
     });
 
-    max7219.display(10000.0);
-
     while (state.running) {
         //printState(state);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    inputThread.join();
     outputThread.join();
 
     return 0;
