@@ -8,8 +8,8 @@ Input* pInstance; // wiringPi only allows to set an ISR handler through a void p
 
 Input::Input(State& state_)
 	: m_state(state_)
-	, m_thread(&Input::process, this) {
-
+	, m_thread(&Input::process, this)
+{
 	pInstance = this;
 
 	pinMode(PlayButton, INPUT);
@@ -46,20 +46,28 @@ void Input::playButtonPressed() {
 }
 
 void Input::encoderButtonPressed() {
-	int mode = (m_state.clockDivMode + 1) % NUM_CLOCK_DIVS;
-	m_state.clockDivMode.store(static_cast<ClockDivMode>(mode));
+	int viewState = (m_state.viewState() + 1) % NUM_VIEW_STATES;
+	m_state.setViewState(static_cast<ViewState>(viewState));
 }
 
 void Input::encoderTurned(bool clockwise) {
-	const auto time = m_state.link.clock().micros();
-	auto sessionState = m_state.link.captureAppSessionState();
+	switch (m_state.viewState()) {
 
-	auto tempo = sessionState.tempo();
-    tempo += clockwise ? 0.5 : -0.5;
-    tempo = std::llround(tempo * 2) / 2.0; // round to nearest half
-    sessionState.setTempo(tempo, time);
+		case Tempo: { // change Tempo
+			float tempo = m_state.tempo();
+		    tempo += clockwise ? 0.5 : -0.5;
+		    tempo = std::llround(tempo * 2) / 2.0; // round to nearest half
+		    m_state.setTempo(tempo);
+			break;
+		}
 
-	m_state.link.commitAudioSessionState(sessionState);
+		case ClockDiv: { // change ClockDiv
+			int mode = (m_state.clockDivMode() + (clockwise ? 1 : -1)) % NUM_CLOCK_DIVS;
+			m_state.setClockDivMode(static_cast<ClockDivMode>(mode));
+			break;
+		}
+	}
+
 }
 
 // -------------------------------------------------------------------------------------------

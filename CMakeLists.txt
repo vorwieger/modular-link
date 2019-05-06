@@ -8,7 +8,9 @@ include_directories(${link_HEADERS})
 
 set(SRC
   src/main.cpp
+  src/State.cpp
   src/Max7219.cpp
+  src/Display.cpp
   src/Input.cpp
   src/Output.cpp
 )
