@@ -2,6 +2,8 @@
 #include "Max7219.h"
 
 #include <cmath>
+#include <chrono>
+#include <thread>
 #include <wiringPi.h>
 
 #define MAX7219_PIN_DATA    12 // GPIO 10, WiringPi 12, Raspi PIN 19
@@ -10,13 +12,15 @@
 
 #define MAX7219_NUM_DIGITS  4  // 4 Digits
 
+#define MAX7219_WRITE_DELAY  10  // 10 microseconds delay after write
+
 // -------------------------------------------------------------------------------------------------
 
 Max7219::Max7219() {
 	wiringPiSetup();
-	pinMode(MAX7219_PIN_DATA, 1);       // OUTPUT
-	pinMode(MAX7219_PIN_CLOCK, 1);      // OUTPUT
-	pinMode(MAX7219_PIN_LOAD, 1);       // OUTPUT
+	pinMode(MAX7219_PIN_DATA, OUTPUT);
+	pinMode(MAX7219_PIN_CLOCK, OUTPUT);
+	pinMode(MAX7219_PIN_LOAD, OUTPUT);
 
 	send(MAX7219_REG_SCANLIMIT, 7);     // Set up to scan all eight digits
 	send(MAX7219_REG_DECODEMODE, 0);    // Set BCD decode mode off
@@ -32,20 +36,27 @@ void Max7219::send16bits (unsigned short output) {
   for (i=16; i>0; i--) {
     unsigned short mask = 1 << (i - 1); // calculate bitmask
     digitalWrite(MAX7219_PIN_CLOCK, 0);  // set clock to 0
+    std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+
     // Send one bit on the data pin
     if (output & mask) {
       digitalWrite(MAX7219_PIN_DATA, 1);
     } else {
       digitalWrite(MAX7219_PIN_DATA, 0);
     }
+	std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+
     digitalWrite(MAX7219_PIN_CLOCK, 1);  // set clock to 1
+    std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
   }
 }
 
 void Max7219::send(unsigned char reg_number, unsigned char dataout) {
   digitalWrite(MAX7219_PIN_LOAD, 0);  // set LOAD 0 to start
+  std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
   send16bits((reg_number << 8) + dataout);
   digitalWrite(MAX7219_PIN_LOAD, 1);  // set LOAD 1 to finish
+  std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
 }
 
 void Max7219::sendChars(const std::string& value, unsigned char dot) {
