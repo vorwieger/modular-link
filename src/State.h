@@ -53,7 +53,7 @@ class State {
   private:
 
       std::atomic<ViewState> m_viewState;
-      std::atomic<double> m_tempo;
+      std::atomic<double> m_tempo {120.0};
       std::atomic<ClockDivMode> m_clockDivMode;
 
       std::list<StateObserver*> observers;

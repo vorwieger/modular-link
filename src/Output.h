@@ -10,26 +10,31 @@
 
 class Output {
 
-	// Using WiringPi numbering scheme
-	enum OutPin {
-      Clock = 1,
-      Reset = 23,
-      PlayIndicator = 11
-  	};
+  // Using WiringPi numbering scheme
+  enum OutPin {
+    Clock = 1,
+    Reset = 23,
+    PlayIndicator = 11
+  };
 
-	public:
+  public:
 
-		Output(State& /*state*/);
-		~Output();
+    Output(State& /*state*/);
+    ~Output();
 
+private:
 
-	private:
+  void process();
 
-		void process();
+  void setClock(bool high);
+  void setReset(bool high);
 
-		void outputClock(double /*beats*/, double /*phase*/, double /*tempo*/, float /*clockDiv*/);
+  bool m_clockHigh = false;
+  bool m_resetHigh = false;
 
-		State& m_state;
-  		std::thread m_thread;
+  void outputClock(double /*beats*/, double /*phase*/, double /*tempo*/, float /*clockDiv*/);
+
+  State& m_state;
+  std::thread m_thread;
 
 };

@@ -1,8 +1,7 @@
 #include "State.h"
 
 State::State()
-  : m_tempo(120.0)
-  , link(m_tempo)
+  : link(m_tempo)
   , running(true)
   , m_viewState(Tempo)
   , playState(Stopped)
