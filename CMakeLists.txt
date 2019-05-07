@@ -14,8 +14,10 @@ set(SRC
   src/Input.cpp
   src/Output.cpp
 )
-add_executable(ModularLink ${SRC})
+add_executable(${PROJECT_NAME} ${SRC})
 
-target_link_libraries(ModularLink pthread)
-target_link_libraries(ModularLink Ableton::Link)
-target_link_libraries(ModularLink wiringPi)
+target_link_libraries(${PROJECT_NAME} pthread)
+target_link_libraries(${PROJECT_NAME} Ableton::Link)
+target_link_libraries(${PROJECT_NAME} wiringPi)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "modlink")

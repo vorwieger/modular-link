@@ -1,0 +1,14 @@
+[Unit]
+Description=Modular Link
+
+[Service]
+ExecStart=/home/pi/modular-link/bin/modlink
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=modlink
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
