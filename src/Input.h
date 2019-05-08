@@ -10,32 +10,32 @@
 
 class Input {
 
-	// Using WiringPi numbering scheme
-	enum InPin {
-		PlayButton = 21,
-		EncoderButton = 22,  // BCM 6
-		EncoderLeft = 27,      // BCM 19
-		EncoderRight = 24     // BCM 16
-	};
+  // Using WiringPi numbering scheme
+  enum InPin {
+    PlayButton = 21,
+    EncoderButton = 22,  // BCM 6
+    EncoderLeft = 27,      // BCM 19
+    EncoderRight = 24     // BCM 16
+  };
 
-	public:
+  public:
 
-		Input(State& /*state*/);
-		~Input();
+    Input(State& /*state*/);
+    ~Input();
 
-		void playButtonPressed();
-		void encoderButtonPressed();
-		void encoderTurned(bool /*clockwise*/);
+    void playButtonPressed();
+    void encoderButtonPressed();
+    void encoderTurned(bool /*clockwise*/);
 
-	private:
+  private:
 
-		void process();
+    void process();
 
-		bool isPlayButtonPressed();
-		bool isEncoderButtonPressed();
-		static void encoderHandler();
+    bool isPlayButtonPressed();
+    bool isEncoderButtonPressed();
+    static void encoderHandler();
 
-		State& m_state;
-  		std::thread m_thread;
+    State& m_state;
+      std::thread m_thread;
 
 };

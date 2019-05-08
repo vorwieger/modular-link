@@ -1,16 +1,17 @@
 #include "State.h"
 
+#include <algorithm>
+
 State::State()
-  : link(m_tempo)
-  , running(true)
+  : link(120.0)
+  , m_running(true)
   , m_viewState(Tempo)
-  , playState(Stopped)
-  , m_clockDivMode(Quarter)
-  , quantum(4)
+  , m_playState(Stopped)
+  , m_pulsesPerBeat(1)
+  , m_quantum(4)
 {
   link.enable(true);
   link.setTempoCallback([&](double bpm) {
-    m_tempo.store(bpm);
     stateChanged();
   });
 }
@@ -35,12 +36,69 @@ ViewState State::viewState() {
 }
 
 void State::setViewState(ViewState viewState_) {
+  if (m_viewState == viewState_) { return; }
   m_viewState.store(viewState_);
   stateChanged();
 }
 
+// -------------------------------------------------------------------------------------------
+
+PlayState State::playState() {
+  return m_playState;
+}
+
+void State::setPlayState(PlayState playState_) {
+  if (m_playState == playState_) { return; }
+  m_playState.store(playState_);
+  stateChanged();
+}
+
+// -------------------------------------------------------------------------------------------
+
+int State::quantum() {
+  return m_quantum;
+}
+
+void State::setQuantum(int quantum_) {
+  if (m_quantum == quantum_) { return; }
+  m_quantum = quantum_;
+  stateChanged();
+}
+
+// -------------------------------------------------------------------------------------------
+
+int State::pulsesPerBeat() {
+  return m_pulsesPerBeat;
+}
+
+void State::setPulsesPerBeat(int pulsesPerBeat_) {
+  pulsesPerBeat_ = std::max(1, std::min(pulsesPerBeat_, 4)); // zwischen 1 und 4
+  if (m_pulsesPerBeat == pulsesPerBeat_) { return; }
+  m_pulsesPerBeat = pulsesPerBeat_;
+  stateChanged();
+}
+
+// -------------------------------------------------------------------------------------------
+
+bool State::running() {
+  return m_running;
+}
+
+// -------------------------------------------------------------------------------------------
+
 float State::tempo() {
-  return m_tempo;
+  return link.captureAppSessionState().tempo();
+}
+
+LinkState State::getLinkState() {
+  const auto time = link.clock().micros();
+  auto sessionState = link.captureAppSessionState();
+
+  const double beats = sessionState.beatAtTime(time, quantum());
+  const double phase = sessionState.phaseAtTime(time, quantum());
+  const double tempo = sessionState.tempo();
+
+  return LinkState { beats, phase, tempo };
 }
 
 void State::setTempo(float tempo_) {
@@ -48,28 +106,6 @@ void State::setTempo(float tempo_) {
   auto sessionState = link.captureAppSessionState();
   sessionState.setTempo(tempo_, time);
   link.commitAudioSessionState(sessionState);
-}
-
-ClockDivMode State::clockDivMode() {
-  return m_clockDivMode;
-}
-
-float State::clockDivValue() {
-  switch (m_clockDivMode) {
-    case Sixteenth:
-      return 1.0;
-    case Eighth:
-      return 0.5;
-    case Quarter:
-      return 0.25;
-    default:
-      return 1.0;
-  }
-}
-
-void State::setClockDivMode(ClockDivMode clockDivMode_) {
-  m_clockDivMode.store(clockDivMode_);
-  stateChanged();
 }
 
 // -------------------------------------------------------------------------------------------

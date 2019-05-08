@@ -9,16 +9,9 @@ enum PlayState {
     Playing
 };
 
-enum ClockDivMode {
-    Sixteenth = 0,
-    Eighth,
-    Quarter,
-    NUM_CLOCK_DIVS
-};
-
 enum ViewState {
     Tempo,
-    ClockDiv,
+    PulsesPerBeat,
     NUM_VIEW_STATES
 };
 
@@ -27,34 +20,48 @@ class StateObserver {
     virtual void stateChanged() = 0;
 };
 
+struct LinkState {
+  const double beats;
+  const double phase;
+  const double tempo;
+};
+
 class State {
 
   public:
 
       State();
+      LinkState getLinkState();
 
       void registerObserver(StateObserver* /*observer*/);
 
       ViewState viewState();
       void setViewState(ViewState /*viewState_*/);
 
+      PlayState playState();
+      void setPlayState(PlayState /*playState_*/);
+
       float tempo();
       void setTempo(float /*tempo_*/);
 
-      ClockDivMode clockDivMode();
-      float clockDivValue();
-      void setClockDivMode(ClockDivMode /*clockDivMode_*/);
+      int quantum();
+      void setQuantum(int /*quantum_*/);
 
-      ableton::Link link;
-      std::atomic<bool> running;
-      std::atomic<PlayState> playState;
-      std::atomic<int> quantum;
+      int pulsesPerBeat();
+      void setPulsesPerBeat(int /*pulsesPerBeat_*/);
+
+      bool running();
+
 
   private:
 
+      ableton::Link link;
+
       std::atomic<ViewState> m_viewState;
-      std::atomic<double> m_tempo {120.0};
-      std::atomic<ClockDivMode> m_clockDivMode;
+      std::atomic<PlayState> m_playState;
+      std::atomic<int> m_quantum;
+      std::atomic<int> m_pulsesPerBeat;
+      std::atomic<bool> m_running;
 
       std::list<StateObserver*> observers;
       void stateChanged();

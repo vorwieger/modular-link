@@ -5,16 +5,16 @@
 
 class Display : public StateObserver {
 
-	public:
+  public:
 
-		Display(State& /*state*/);
-		~Display();
+    Display(State& /*state*/);
+    ~Display();
 
-		void stateChanged() override;
+    void stateChanged() override;
 
-	private:
+  private:
 
-		State& m_state;
-		Max7219 max7219;
+    State& m_state;
+    Max7219 max7219;
 
 };

@@ -26,13 +26,15 @@ private:
 
   void process();
 
-  void setClock(bool high);
-  void setReset(bool high);
+  void setPlayIndicator(bool /*high*/);
+  void setClock(bool /*high*/);
+  void setReset(bool /*high*/);
 
+  bool m_playHigh = false;
   bool m_clockHigh = false;
   bool m_resetHigh = false;
 
-  void outputClock(double /*beats*/, double /*phase*/, double /*tempo*/, float /*clockDiv*/);
+  void outputClock(double /*beats*/, double /*phase*/, double /*tempo*/, int /*pulsesPerBeat*/);
 
   State& m_state;
   std::thread m_thread;
