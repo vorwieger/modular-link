@@ -7,7 +7,7 @@
 #include <wiringPi.h>
 
 #define MAX7219_PIN_DATA    12 // GPIO 10, WiringPi 12, Raspi PIN 19
-#define MAX7219_PIN_CLOCK 14 // GPIO 11, WiringPi 14, Raspi PIN 23
+#define MAX7219_PIN_CLOCK   14 // GPIO 11, WiringPi 14, Raspi PIN 23
 #define MAX7219_PIN_LOAD    10 // GPIO  8, WiringPi 10, Raspi PIN 24
 
 #define MAX7219_NUM_DIGITS  4  // 4 Digits

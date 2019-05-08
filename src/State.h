@@ -1,18 +1,19 @@
 #pragma once
 
 #include <list>
+#include <mutex>
 #include <ableton/Link.hpp>
 
 enum PlayState {
-    Stopped,
-    Cued,
-    Playing
+    STOPPED,
+    CUED,
+    PLAYING
 };
 
 enum ViewState {
-    Tempo,
-    PulsesPerBeat,
-    NUM_VIEW_STATES
+    TEMPO,
+    PULSE,
+    LOOP
 };
 
 class StateObserver {
@@ -44,11 +45,11 @@ class State {
       float tempo();
       void setTempo(float /*tempo_*/);
 
-      int quantum();
-      void setQuantum(int /*quantum_*/);
+      int loop();
+      void setLoop(int /*loop_*/);
 
-      int pulsesPerBeat();
-      void setPulsesPerBeat(int /*pulsesPerBeat_*/);
+      int pulse();
+      void setPulse(int /*pulse_*/);
 
       bool running();
 
@@ -59,11 +60,16 @@ class State {
 
       std::atomic<ViewState> m_viewState;
       std::atomic<PlayState> m_playState;
-      std::atomic<int> m_quantum;
-      std::atomic<int> m_pulsesPerBeat;
+      std::atomic<int> m_loop;
+      std::atomic<int> m_pulse;
       std::atomic<bool> m_running;
 
       std::list<StateObserver*> observers;
       void stateChanged();
+
+      std::mutex m_updateViewState;
+      std::mutex m_updatePlayState;
+      std::mutex m_updateLoop;
+      std::mutex m_updatePulse;
 
 };

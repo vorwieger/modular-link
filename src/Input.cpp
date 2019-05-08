@@ -20,11 +20,11 @@ Input::Input(State& state_)
   pullUpDnControl(EncoderButton, PUD_DOWN);
 
   pinMode(EncoderLeft, INPUT);
-    pinMode(EncoderRight, INPUT);
-    pullUpDnControl(EncoderLeft, PUD_UP);
-    pullUpDnControl(EncoderRight, PUD_UP);
-    wiringPiISR(EncoderLeft, INT_EDGE_BOTH, encoderHandler);
-    wiringPiISR(EncoderRight, INT_EDGE_BOTH, encoderHandler);
+  pinMode(EncoderRight, INPUT);
+  pullUpDnControl(EncoderLeft, PUD_UP);
+  pullUpDnControl(EncoderRight, PUD_UP);
+  wiringPiISR(EncoderLeft, INT_EDGE_BOTH, encoderHandler);
+  wiringPiISR(EncoderRight, INT_EDGE_BOTH, encoderHandler);
 }
 
 Input::~Input() {
@@ -37,37 +37,54 @@ Input::~Input() {
 
 void Input::playButtonPressed() {
   switch (m_state.playState()) {
-    case Stopped:
-      m_state.setPlayState(Cued);
+    case STOPPED: {
+      m_state.setPlayState(CUED);
       break;
-    case Cued:
-      m_state.setPlayState(Stopped);
+    }
+    case CUED: {
+      m_state.setPlayState(STOPPED);
       break;
-    case Playing:
-      m_state.setPlayState(Stopped);
+    }
+    case PLAYING: {
+      m_state.setPlayState(STOPPED);
       break;
+    }
   }
 }
 
 void Input::encoderButtonPressed() {
-  int viewState = (m_state.viewState() + 1) % NUM_VIEW_STATES;
-  m_state.setViewState(static_cast<ViewState>(viewState));
+  switch (m_state.viewState()) {
+    case TEMPO: {
+      m_state.setViewState(PULSE);
+      break;
+    }
+    case PULSE: {
+       m_state.setViewState(LOOP);
+      break;
+    }
+    case LOOP: {
+      m_state.setViewState(TEMPO);
+      break;
+    }
+  }
 }
 
 void Input::encoderTurned(bool clockwise) {
   switch (m_state.viewState()) {
-
-    case Tempo: { // change Tempo
-      m_state.setTempo(std::llround(m_state.tempo() + (clockwise ? 1 : -1)));
+    case TEMPO: { // change Tempo
+      int step = m_state.tempo() >= 300 ? 10 : 1;
+      m_state.setTempo(std::llround(m_state.tempo() + (clockwise ? step : -step)));
       break;
     }
-
-    case PulsesPerBeat: { // change ClockDiv
-      m_state.setPulsesPerBeat(m_state.pulsesPerBeat() * (clockwise ? 2 : 0.5));
+    case PULSE: { // change pulse
+      m_state.setPulse(m_state.pulse() * (clockwise ? 2 : 0.5));
+      break;
+    }
+    case LOOP: { // change loop
+      m_state.setLoop(m_state.loop() + (clockwise ? 1 : -1));
       break;
     }
   }
-
 }
 
 // -------------------------------------------------------------------------------------------
@@ -86,19 +103,18 @@ bool Input::isEncoderButtonPressed() {
 
 void Input::encoderHandler() {
   static uint8_t encoderAxisState = 0;
-    int msb = digitalRead(pInstance->EncoderLeft);
-    int lsb = digitalRead(pInstance->EncoderRight);
-    int encoded = (msb << 1) | lsb;
-    if (encoded == 0b00) {
-      if (encoderAxisState == 0b01) {
-        pInstance->encoderTurned(true); // turned clockwise
-      } else if (encoderAxisState == 0b10) {
-        pInstance->encoderTurned(false); // turned counterclockwise
-      }
+  int msb = digitalRead(pInstance->EncoderLeft);
+  int lsb = digitalRead(pInstance->EncoderRight);
+  int encoded = (msb << 1) | lsb;
+  if (encoded == 0b00) {
+    if (encoderAxisState == 0b01) {
+      pInstance->encoderTurned(true); // turned clockwise
+    } else if (encoderAxisState == 0b10) {
+      pInstance->encoderTurned(false); // turned counterclockwise
     }
+  }
   encoderAxisState = encoded;
 }
-
 
 // -------------------------------------------------------------------------------------------
 

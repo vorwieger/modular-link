@@ -2,13 +2,18 @@
 
 #include <algorithm>
 
+const int MAX_LOOP = 16; // Up to 16 beats per loop
+const int MAX_PULSE = 8;  // 1, 2, 4, 8 pulses per beat
+
+// -------------------------------------------------------------------------------------------
+
 State::State()
   : link(120.0)
   , m_running(true)
-  , m_viewState(Tempo)
-  , m_playState(Stopped)
-  , m_pulsesPerBeat(1)
-  , m_quantum(4)
+  , m_viewState(TEMPO)
+  , m_playState(STOPPED)
+  , m_pulse(1)
+  , m_loop(4)
 {
   link.enable(true);
   link.setTempoCallback([&](double bpm) {
@@ -36,6 +41,7 @@ ViewState State::viewState() {
 }
 
 void State::setViewState(ViewState viewState_) {
+  std::lock_guard<std::mutex> lock(m_updateViewState);
   if (m_viewState == viewState_) { return; }
   m_viewState.store(viewState_);
   stateChanged();
@@ -48,6 +54,7 @@ PlayState State::playState() {
 }
 
 void State::setPlayState(PlayState playState_) {
+  std::lock_guard<std::mutex> lock(m_updatePlayState);
   if (m_playState == playState_) { return; }
   m_playState.store(playState_);
   stateChanged();
@@ -55,26 +62,29 @@ void State::setPlayState(PlayState playState_) {
 
 // -------------------------------------------------------------------------------------------
 
-int State::quantum() {
-  return m_quantum;
+int State::loop() {
+  return m_loop;
 }
 
-void State::setQuantum(int quantum_) {
-  if (m_quantum == quantum_) { return; }
-  m_quantum = quantum_;
+void State::setLoop(int loop_) {
+  std::lock_guard<std::mutex> lock(m_updateLoop);
+  loop_ = std::max(1, std::min(loop_, MAX_LOOP));
+  if (m_loop == loop_) { return; }
+  m_loop = loop_;
   stateChanged();
 }
 
 // -------------------------------------------------------------------------------------------
 
-int State::pulsesPerBeat() {
-  return m_pulsesPerBeat;
+int State::pulse() {
+  return m_pulse;
 }
 
-void State::setPulsesPerBeat(int pulsesPerBeat_) {
-  pulsesPerBeat_ = std::max(1, std::min(pulsesPerBeat_, 8)); // zwischen 1 und 8
-  if (m_pulsesPerBeat == pulsesPerBeat_) { return; }
-  m_pulsesPerBeat = pulsesPerBeat_;
+void State::setPulse(int pulse_) {
+  std::lock_guard<std::mutex> lock(m_updatePulse);
+  pulse_ = std::max(1, std::min(pulse_, MAX_PULSE));
+  if (m_pulse == pulse_) { return; }
+  m_pulse = pulse_;
   stateChanged();
 }
 
@@ -93,11 +103,9 @@ float State::tempo() {
 LinkState State::getLinkState() {
   const auto time = link.clock().micros();
   auto sessionState = link.captureAppSessionState();
-
-  const double beats = sessionState.beatAtTime(time, quantum());
-  const double phase = sessionState.phaseAtTime(time, quantum());
+  const double beats = sessionState.beatAtTime(time, pulse());
+  const double phase = sessionState.phaseAtTime(time, pulse());
   const double tempo = sessionState.tempo();
-
   return LinkState { beats, phase, tempo };
 }
 

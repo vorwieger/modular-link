@@ -14,8 +14,8 @@ class Input {
   enum InPin {
     PlayButton = 21,
     EncoderButton = 22,  // BCM 6
-    EncoderLeft = 27,      // BCM 19
-    EncoderRight = 24     // BCM 16
+    EncoderLeft = 27,    // BCM 19
+    EncoderRight = 24    // BCM 16
   };
 
   public:
@@ -33,9 +33,10 @@ class Input {
 
     bool isPlayButtonPressed();
     bool isEncoderButtonPressed();
+
     static void encoderHandler();
 
     State& m_state;
-      std::thread m_thread;
+    std::thread m_thread;
 
 };
