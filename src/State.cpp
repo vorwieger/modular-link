@@ -72,7 +72,7 @@ int State::pulsesPerBeat() {
 }
 
 void State::setPulsesPerBeat(int pulsesPerBeat_) {
-  pulsesPerBeat_ = std::max(1, std::min(pulsesPerBeat_, 4)); // zwischen 1 und 4
+  pulsesPerBeat_ = std::max(1, std::min(pulsesPerBeat_, 8)); // zwischen 1 und 8
   if (m_pulsesPerBeat == pulsesPerBeat_) { return; }
   m_pulsesPerBeat = pulsesPerBeat_;
   stateChanged();

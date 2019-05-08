@@ -12,7 +12,7 @@
 
 #define MAX7219_NUM_DIGITS  4  // 4 Digits
 
-#define MAX7219_WRITE_DELAY  10  // 10 microseconds delay after write
+const auto MAX7219_WRITE_DELAY = std::chrono::microseconds(10); // microseconds delay after write
 
 // -------------------------------------------------------------------------------------------------
 
@@ -31,12 +31,14 @@ Max7219::Max7219() {
   display(" ");           // Cleanup display
 }
 
+// -------------------------------------------------------------------------------------------------
+
 void Max7219::send16bits (unsigned short output) {
   unsigned char i;
   for (i=16; i>0; i--) {
     unsigned short mask = 1 << (i - 1); // calculate bitmask
     digitalWrite(MAX7219_PIN_CLOCK, 0);  // set clock to 0
-    std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+    std::this_thread::sleep_for(MAX7219_WRITE_DELAY);
 
     // Send one bit on the data pin
     if (output & mask) {
@@ -44,19 +46,19 @@ void Max7219::send16bits (unsigned short output) {
     } else {
       digitalWrite(MAX7219_PIN_DATA, 0);
     }
-    std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+    std::this_thread::sleep_for(MAX7219_WRITE_DELAY);
 
     digitalWrite(MAX7219_PIN_CLOCK, 1);  // set clock to 1
-    std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+    std::this_thread::sleep_for(MAX7219_WRITE_DELAY);
   }
 }
 
 void Max7219::send(unsigned char reg_number, unsigned char dataout) {
   digitalWrite(MAX7219_PIN_LOAD, 0);  // set LOAD 0 to start
-  std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+    std::this_thread::sleep_for(MAX7219_WRITE_DELAY);
   send16bits((reg_number << 8) + dataout);
   digitalWrite(MAX7219_PIN_LOAD, 1);  // set LOAD 1 to finish
-  std::this_thread::sleep_for(std::chrono::microseconds(MAX7219_WRITE_DELAY));
+    std::this_thread::sleep_for(MAX7219_WRITE_DELAY);
 }
 
 void Max7219::sendChars(const std::string& value, unsigned char dot) {
@@ -73,6 +75,8 @@ void Max7219::sendChars(const std::string& value, unsigned char dot) {
 // -------------------------------------------------------------------------------------------------
 
 void Max7219::display(int value_) {
+  std::lock_guard<std::mutex> lock(m_updating);
+
   std::string strValue = std::to_string(static_cast<int>(value_));
   std::string strFill = "";
   bool showDot = false;
@@ -89,6 +93,8 @@ void Max7219::display(int value_) {
 // -------------------------------------------------------------------------------------------------
 
 void Max7219::display(double value_) {
+  std::lock_guard<std::mutex> lock(m_updating);
+
   double integral;
   double fractional = modf(value_, &integral);
   std::string strValue = std::to_string(static_cast<int>(integral));
@@ -117,6 +123,8 @@ void Max7219::display(double value_) {
 // -------------------------------------------------------------------------------------------------
 
 void Max7219::display(const std::string& value_) {
+  std::lock_guard<std::mutex> lock(m_updating);
+
   std::string strValue(value_);
   std::string strFill = "";
 

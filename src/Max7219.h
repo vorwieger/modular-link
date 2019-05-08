@@ -1,6 +1,7 @@
-
 #pragma once
+
 #include <string>
+#include <mutex>
 
 class Max7219 {
 
@@ -30,6 +31,8 @@ private:
   void send16bits (unsigned short /*output*/);
   void send(unsigned char /*reg_number*/, unsigned char /*dataout*/);
   void sendChars(const std::string& /*value_*/, unsigned char /*dot*/);
+
+  std::mutex m_updating;
 
   const unsigned char Max7219_font[91] = {
     0b0000000, // ' '
