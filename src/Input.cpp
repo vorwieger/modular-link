@@ -102,14 +102,19 @@ bool Input::isEncoderButtonPressed() {
 }
 
 void Input::encoderHandler() {
+  static unsigned int lastEncoderAxisStateChange = 0;
   static uint8_t encoderAxisState = 0;
   int msb = digitalRead(pInstance->EncoderLeft);
   int lsb = digitalRead(pInstance->EncoderRight);
   int encoded = (msb << 1) | lsb;
   if (encoded == 0b00) {
     if (encoderAxisState == 0b01) {
+      if (millis() - lastEncoderAxisStateChange < 10) { return; } // bounce -> ignore
+      lastEncoderAxisStateChange = millis();
       pInstance->encoderTurned(true); // turned clockwise
     } else if (encoderAxisState == 0b10) {
+      if (millis() - lastEncoderAxisStateChange < 10) { return; } // bounce -> ignore
+      lastEncoderAxisStateChange = millis();
       pInstance->encoderTurned(false); // turned counterclockwise
     }
   }
