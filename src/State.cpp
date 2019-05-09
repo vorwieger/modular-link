@@ -103,8 +103,8 @@ float State::tempo() {
 LinkState State::getLinkState() {
   const auto time = link.clock().micros();
   auto sessionState = link.captureAppSessionState();
-  const double beats = sessionState.beatAtTime(time, pulse());
-  const double phase = sessionState.phaseAtTime(time, pulse());
+  const double beats = sessionState.beatAtTime(time, loop());
+  const double phase = sessionState.phaseAtTime(time, loop());
   const double tempo = sessionState.tempo();
   return LinkState { beats, phase, tempo };
 }
