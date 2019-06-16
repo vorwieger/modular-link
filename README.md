@@ -1,5 +1,4 @@
-# modular-link
-Ableton Link on Raspberry Pi
+# modular-link - Ableton Link on Raspberry Pi
 
 Inspired by the nice project "https://github.com/shaduzlabs/pink-0" I build my own module with some modifications in terms of used components. The software part has been completely rewritten.
 
@@ -16,13 +15,12 @@ The company that offers an Ableton Link device as a stand-alone product should n
 * Raspberry Pi as WLAN Access Point
 
 ## Eurorack Module
-![doc/modular-link-1.jpg]
-![doc/modular-link-2.jpg]
+<img src="doc/modular-link-1.jpg"> <img src="doc/modular-link-2.jpg">
 
 ## Hardware Wiring
 
 ### Eagle Schema
-![doc/schema.pdf]
+<img src="doc/schema.png" width="100%">
 
 ### Mappings between wiriingPi and physical Pins
 
@@ -67,8 +65,7 @@ pv 2019-04-08-raspbian-stretch-lite.img | sudo dd bs=1m of=/dev/disk2
 diskutil mountDisk /dev/disk2
 ```
 
-Enable SSH
-```
+Enable SSH ```
 touch /Volumes/boot/ssh
 ```
 
@@ -106,21 +103,21 @@ git submodule update --init --recursive
 ```
 
 ```
-    make
+make
 ```
 
 ### Install
 ```
-    sudo cp modlink.service /etc/systemd/system/
-    sudo chmod u-w-x /etc/systemd/system/modlink.service
-    sudo systemctl enable modlink
+sudo cp modlink.service /etc/systemd/system/
+sudo chmod u-w-x /etc/systemd/system/modlink.service
+sudo systemctl enable modlink
 ```
 
-### Start /Stop Service
+### Start/Stop Service
 ```
-    sudo systemctl start modlink
+sudo systemctl start modlink
 ```
 
 ```
-    sudo systemctl stop modlink
+sudo systemctl stop modlink
 ```
