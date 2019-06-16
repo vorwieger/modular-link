@@ -2,7 +2,7 @@
 
 Inspired by the nice project "https://github.com/shaduzlabs/pink-0" I build my own module with some modifications in terms of used components. The software part has been completely rewritten.
 
-The company that offers an Ableton Link device as a stand-alone product should not go unmentioned: Missing Link from http://circuithappy.com (By the way I have no affiliation with this company).
+The company that offers an Ableton Link device as a stand-alone product should not go unmentioned: _Missing Link_ from [Circuit Happy](https://circuithappy.com) (By the way I have no affiliation with this company).
 
 ### Changes/Features
 * Complete rewrite of methods for the trigger outputs
@@ -15,17 +15,18 @@ The company that offers an Ableton Link device as a stand-alone product should n
 * Raspberry Pi as WLAN Access Point
 
 ## Eurorack Module
-<img src="doc/modular-link-1.jpg"> <img src="doc/modular-link-2.jpg">
+<img src="doc/modular-link-1.jpg"> <span>&nbsp;&nbsp;&nbsp;&nbsp;<span> <img src="doc/modular-link-2.jpg" width=59%>
 
 ## Hardware Wiring
 
 ### Eagle Schema
-<img src="doc/schema.png" width="100%">
+<img src="doc/schema.png">
 
 ### Mappings between wiriingPi and physical Pins
 
 `pi@raspberrypi:~ $ gpio readall`
-```+-----+-----+---------+------+---+-Pi ZeroW-+---+------+---------+-----+-----+
+``` bash
++-----+-----+---------+------+---+-Pi ZeroW-+---+------+---------+-----+-----+
 | BCM | wPi |   Name  | Mode | V | Physical | V | Mode | Name    | wPi | BCM |
 +-----+-----+---------+------+---+----++----+---+------+---------+-----+-----+
 |     |     |    3.3v |      |   |  1 || 2  |   |      | 5v      |     |     |
@@ -59,24 +60,25 @@ The company that offers an Ableton Link device as a stand-alone product should n
 ### Create Boot-Disk
 
 Copy Image from macOS to SD-Card
-```
+``` bash
 diskutil unmountDisk /dev/disk2
 pv 2019-04-08-raspbian-stretch-lite.img | sudo dd bs=1m of=/dev/disk2
 diskutil mountDisk /dev/disk2
 ```
 
-Enable SSH ```
+Enable SSH
+``` bash
 touch /Volumes/boot/ssh
 ```
 
 Enable WLAN
-```
+``` bash
 echo -e 'country=DE\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\nnetwork={\nssid="###WLAN-SSID###"\npsk="###PASSWORD###"\nkey_mgmt=WPA-PSK\n}' > /Volumes/boot/wpa_supplicant.conf
 ```
 Replace ###WLAN-SSID### and ###PASSWORD## with your concrete values. 
 
 Unmount disk
-```
+``` bash
 diskutil unmountDisk /dev/disk2
 ```
 
@@ -88,7 +90,7 @@ Now put SD-Card into Raspberry and boot...
 * Advanced Configuration ->  Expand Filesystem
 
 ### Packages
-```
+``` bash
 sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install git cmake wiringpi
@@ -96,28 +98,29 @@ sudo apt-get install librtmidi-dev
 ```
 
 ### Build
-```
+``` bash
 git clone https://github.com/vorwieger/modular-link.git
 cd modular-link
 git submodule update --init --recursive
 ```
 
-```
+``` bash
 make
 ```
 
 ### Install
-```
+``` bash
 sudo cp modlink.service /etc/systemd/system/
 sudo chmod u-w-x /etc/systemd/system/modlink.service
 sudo systemctl enable modlink
 ```
 
 ### Start/Stop Service
-```
+``` bash
 sudo systemctl start modlink
 ```
 
-```
+``` bash
 sudo systemctl stop modlink
 ```
+
