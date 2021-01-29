@@ -75,10 +75,10 @@ void Output::process() {
         setPlayIndicator((long)(linkState.beats * 2) % 2 == 0);
         setClock(false);
         setReset(false);
-        if (linkState.phase <= 0.01) {
-            m_state.setPlayState(PLAYING);
+        if (linkState.beats < 0) {
+          break;
         }
-        break;
+        m_state.setPlayState(PLAYING);
       }
       case PLAYING: {
         setPlayIndicator(true);

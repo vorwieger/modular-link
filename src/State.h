@@ -51,6 +51,9 @@ class State {
       int pulse();
       void setPulse(int /*pulse_*/);
 
+      void startTimeline();
+      void stopTimeline();
+
       bool running();
 
 

@@ -2,7 +2,7 @@
 Description=Modular Link
 
 [Service]
-ExecStart=/home/pi/modular-link/bin/modlink
+ExecStart=/home/pi/modular-link/build/bin/modlink
 Restart=always
 StandardOutput=syslog
 StandardError=syslog

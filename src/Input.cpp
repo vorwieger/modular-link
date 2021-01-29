@@ -38,15 +38,15 @@ Input::~Input() {
 void Input::playButtonPressed() {
   switch (m_state.playState()) {
     case STOPPED: {
-      m_state.setPlayState(CUED);
+      m_state.startTimeline();
       break;
     }
     case CUED: {
-      m_state.setPlayState(STOPPED);
+      m_state.stopTimeline();
       break;
     }
     case PLAYING: {
-      m_state.setPlayState(STOPPED);
+      m_state.stopTimeline();
       break;
     }
   }

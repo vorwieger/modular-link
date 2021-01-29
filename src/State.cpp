@@ -16,9 +16,22 @@ State::State()
   , m_loop(4)
 {
   link.enable(true);
+  link.enableStartStopSync(true);
   link.setTempoCallback([&](double bpm) {
     stateChanged();
   });
+
+  link.setStartStopCallback([this](const bool isPlaying) {
+    if (isPlaying) {
+      auto sessionState = link.captureAppSessionState();
+      sessionState.requestBeatAtStartPlayingTime(0, m_loop);
+      link.commitAppSessionState(sessionState);
+      setPlayState(CUED);
+    } else {
+      setPlayState(STOPPED);
+    }
+  });
+
 }
 
 // -------------------------------------------------------------------------------------------
@@ -57,7 +70,7 @@ void State::setPlayState(PlayState playState_) {
   std::lock_guard<std::mutex> lock(m_updatePlayState);
   if (m_playState == playState_) { return; }
   m_playState.store(playState_);
-  stateChanged();
+  //stateChanged();
 }
 
 // -------------------------------------------------------------------------------------------
@@ -117,3 +130,17 @@ void State::setTempo(float tempo_) {
 }
 
 // -------------------------------------------------------------------------------------------
+
+void State::startTimeline() {
+  auto sessionState = link.captureAppSessionState();
+  auto now = link.clock().micros();
+  sessionState.setIsPlayingAndRequestBeatAtTime(true, now, 0, m_loop);
+  link.commitAppSessionState(sessionState);
+}
+
+void State::stopTimeline() {
+  auto sessionState = link.captureAppSessionState();
+  auto now = link.clock().micros();
+  sessionState.setIsPlayingAndRequestBeatAtTime(false, now, 0, m_loop);
+  link.commitAppSessionState(sessionState);
+}
