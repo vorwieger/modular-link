@@ -6,7 +6,7 @@
 #include <bitset>
 #include <cmath>
 
-#include "State.h"
+#include "Engine.h"
 
 class Output {
 
@@ -19,7 +19,7 @@ class Output {
 
   public:
 
-    Output(State& /*state*/);
+    Output(Engine& /*engine*/);
     ~Output();
 
 private:
@@ -36,7 +36,7 @@ private:
 
   void outputClock(double /*beats*/, double /*phase*/, double /*tempo*/, int /*pulsesPerBeat*/);
 
-  State& m_state;
+  Engine& m_engine;
   std::thread m_thread;
 
 };

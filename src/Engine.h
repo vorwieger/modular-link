@@ -27,11 +27,11 @@ struct LinkState {
   const double tempo;
 };
 
-class State {
+class Engine {
 
   public:
 
-      State();
+      Engine();
       LinkState getLinkState();
 
       void registerObserver(StateObserver* /*observer*/);

@@ -6,7 +6,7 @@ extern "C" {
     #include <wiringPi.h>
 }
 
-#include "State.h"
+#include "Engine.h"
 #include "Display.h"
 #include "Input.h"
 #include "Output.h"
@@ -15,12 +15,12 @@ int main(void) {
   wiringPiSetup();
   piHiPri(99);
 
-  State state;
-  Input input(state);
-  Output output(state);
-  Display display(state);
+  Engine engine;
+  Input input(engine);
+  Output output(engine);
+  Display display(engine);
 
-  while (state.running()) {
+  while (engine.running()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 

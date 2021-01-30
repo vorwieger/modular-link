@@ -6,8 +6,8 @@ const auto OUTPUT_THREAD_SLEEP = std::chrono::microseconds(250);
 
 // -------------------------------------------------------------------------------------------
 
-Output::Output(State& state_)
-  : m_state(state_)
+Output::Output(Engine& engine_)
+  : m_engine(engine_)
   , m_thread(&Output::process, this) {
 
   pinMode(Clock, OUTPUT);
@@ -62,9 +62,9 @@ void Output::outputClock(double beats, double phase, double tempo, int pulse) {
 // -------------------------------------------------------------------------------------------
 
 void Output::process() {
-  while (m_state.running()) {
-    LinkState linkState = m_state.getLinkState();
-    switch (m_state.playState()) {
+  while (m_engine.running()) {
+    LinkState linkState = m_engine.getLinkState();
+    switch (m_engine.playState()) {
       case STOPPED: {
         setPlayIndicator(false);
         setClock(false);
@@ -78,11 +78,11 @@ void Output::process() {
         if (linkState.beats < 0) {
           break;
         }
-        m_state.setPlayState(PLAYING);
+        m_engine.setPlayState(PLAYING);
       }
       case PLAYING: {
         setPlayIndicator(true);
-        outputClock(linkState.beats, linkState.phase, linkState.tempo, m_state.pulse());
+        outputClock(linkState.beats, linkState.phase, linkState.tempo, m_engine.pulse());
         break;
       }
     }

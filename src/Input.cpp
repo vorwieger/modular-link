@@ -8,8 +8,8 @@ Input* pInstance; // wiringPi only allows to set an ISR handler through a void p
 
 // -------------------------------------------------------------------------------------------
 
-Input::Input(State& state_)
-  : m_state(state_)
+Input::Input(Engine& engine_)
+  : m_engine(engine_)
   , m_thread(&Input::process, this)
 {
   pInstance = this;
@@ -36,52 +36,52 @@ Input::~Input() {
 // -------------------------------------------------------------------------------------------
 
 void Input::playButtonPressed() {
-  switch (m_state.playState()) {
+  switch (m_engine.playState()) {
     case STOPPED: {
-      m_state.startTimeline();
+      m_engine.startTimeline();
       break;
     }
     case CUED: {
-      m_state.stopTimeline();
+      m_engine.stopTimeline();
       break;
     }
     case PLAYING: {
-      m_state.stopTimeline();
+      m_engine.stopTimeline();
       break;
     }
   }
 }
 
 void Input::encoderButtonPressed() {
-  switch (m_state.viewState()) {
+  switch (m_engine.viewState()) {
     case TEMPO: {
-      m_state.setViewState(PULSE);
+      m_engine.setViewState(PULSE);
       break;
     }
     case PULSE: {
-       m_state.setViewState(LOOP);
+       m_engine.setViewState(LOOP);
       break;
     }
     case LOOP: {
-      m_state.setViewState(TEMPO);
+      m_engine.setViewState(TEMPO);
       break;
     }
   }
 }
 
 void Input::encoderTurned(bool clockwise) {
-  switch (m_state.viewState()) {
+  switch (m_engine.viewState()) {
     case TEMPO: { // change Tempo
-      int step = m_state.tempo() >= 300 ? 10 : 1;
-      m_state.setTempo(std::llround(m_state.tempo() + (clockwise ? step : -step)));
+      int step = m_engine.tempo() >= 300 ? 10 : 1;
+      m_engine.setTempo(std::llround(m_engine.tempo() + (clockwise ? step : -step)));
       break;
     }
     case PULSE: { // change pulse
-      m_state.setPulse(m_state.pulse() * (clockwise ? 2 : 0.5));
+      m_engine.setPulse(m_engine.pulse() * (clockwise ? 2 : 0.5));
       break;
     }
     case LOOP: { // change loop
-      m_state.setLoop(m_state.loop() + (clockwise ? 1 : -1));
+      m_engine.setLoop(m_engine.loop() + (clockwise ? 1 : -1));
       break;
     }
   }
@@ -124,7 +124,7 @@ void Input::encoderHandler() {
 // -------------------------------------------------------------------------------------------
 
 void Input::process() {
-  while (m_state.running()) {
+  while (m_engine.running()) {
     if (isPlayButtonPressed()) {
       playButtonPressed();
     }

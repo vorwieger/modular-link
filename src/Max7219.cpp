@@ -1,4 +1,3 @@
-
 #include "Max7219.h"
 
 #include <cmath>

@@ -6,11 +6,11 @@
 
 // -------------------------------------------------------------------------------------------
 
-Display::Display(State& state_)
-  : m_state(state_)
+Display::Display(Engine& engine_)
+  : m_engine(engine_)
   , max7219()
 {
-  m_state.registerObserver(this);
+  m_engine.registerObserver(this);
 }
 
 Display::~Display() {
@@ -19,20 +19,20 @@ Display::~Display() {
 // -------------------------------------------------------------------------------------------
 
 void Display::stateChanged() {
-  switch (m_state.viewState()) {
+  switch (m_engine.viewState()) {
     case TEMPO: {
-      max7219.display(m_state.tempo());
+      max7219.display(m_engine.tempo());
       break;
     }
     case PULSE: {
       std::ostringstream oss;
-      oss << (m_state.pulse() >= 10 ? "Pu" : "Pu ") << m_state.pulse();
+      oss << (m_engine.pulse() >= 10 ? "Pu" : "Pu ") << m_engine.pulse();
       max7219.display(oss.str());
       break;
     }
     case LOOP: {
       std::ostringstream oss;
-      oss << (m_state.loop() >= 10 ? "Lo" : "Lo ") << m_state.loop();
+      oss << (m_engine.loop() >= 10 ? "Lo" : "Lo ") << m_engine.loop();
       max7219.display(oss.str());
       break;
     }

@@ -1,20 +1,20 @@
 #pragma once
 
-#include "State.h"
+#include "Engine.h"
 #include "Max7219.h"
 
 class Display : public StateObserver {
 
   public:
 
-    Display(State& /*state*/);
+    Display(Engine& /*engine*/);
     ~Display();
 
     void stateChanged() override;
 
   private:
 
-    State& m_state;
+    Engine& m_engine;
     Max7219 max7219;
 
 };

@@ -1,4 +1,4 @@
-#include "State.h"
+#include "Engine.h"
 
 #include <algorithm>
 
@@ -7,7 +7,7 @@ const int MAX_PULSE = 8;  // 1, 2, 4, 8 pulses per beat
 
 // -------------------------------------------------------------------------------------------
 
-State::State()
+Engine::Engine()
   : link(120.0)
   , m_running(true)
   , m_viewState(TEMPO)
@@ -36,12 +36,12 @@ State::State()
 
 // -------------------------------------------------------------------------------------------
 
-void State::registerObserver(StateObserver* observer) {
+void Engine::registerObserver(StateObserver* observer) {
   observers.push_back(observer);
   observer->stateChanged();
 }
 
-void State::stateChanged() {
+void Engine::stateChanged() {
   for (StateObserver* observer : observers) {
     observer->stateChanged();
   }
@@ -49,11 +49,11 @@ void State::stateChanged() {
 
 // -------------------------------------------------------------------------------------------
 
-ViewState State::viewState() {
+ViewState Engine::viewState() {
   return m_viewState;
 }
 
-void State::setViewState(ViewState viewState_) {
+void Engine::setViewState(ViewState viewState_) {
   std::lock_guard<std::mutex> lock(m_updateViewState);
   if (m_viewState == viewState_) { return; }
   m_viewState.store(viewState_);
@@ -62,11 +62,11 @@ void State::setViewState(ViewState viewState_) {
 
 // -------------------------------------------------------------------------------------------
 
-PlayState State::playState() {
+PlayState Engine::playState() {
   return m_playState;
 }
 
-void State::setPlayState(PlayState playState_) {
+void Engine::setPlayState(PlayState playState_) {
   std::lock_guard<std::mutex> lock(m_updatePlayState);
   if (m_playState == playState_) { return; }
   m_playState.store(playState_);
@@ -75,11 +75,11 @@ void State::setPlayState(PlayState playState_) {
 
 // -------------------------------------------------------------------------------------------
 
-int State::loop() {
+int Engine::loop() {
   return m_loop;
 }
 
-void State::setLoop(int loop_) {
+void Engine::setLoop(int loop_) {
   std::lock_guard<std::mutex> lock(m_updateLoop);
   loop_ = std::max(1, std::min(loop_, MAX_LOOP));
   if (m_loop == loop_) { return; }
@@ -89,11 +89,11 @@ void State::setLoop(int loop_) {
 
 // -------------------------------------------------------------------------------------------
 
-int State::pulse() {
+int Engine::pulse() {
   return m_pulse;
 }
 
-void State::setPulse(int pulse_) {
+void Engine::setPulse(int pulse_) {
   std::lock_guard<std::mutex> lock(m_updatePulse);
   pulse_ = std::max(1, std::min(pulse_, MAX_PULSE));
   if (m_pulse == pulse_) { return; }
@@ -103,17 +103,17 @@ void State::setPulse(int pulse_) {
 
 // -------------------------------------------------------------------------------------------
 
-bool State::running() {
+bool Engine::running() {
   return m_running;
 }
 
 // -------------------------------------------------------------------------------------------
 
-float State::tempo() {
+float Engine::tempo() {
   return link.captureAppSessionState().tempo();
 }
 
-LinkState State::getLinkState() {
+LinkState Engine::getLinkState() {
   const auto time = link.clock().micros();
   auto sessionState = link.captureAppSessionState();
   const double beats = sessionState.beatAtTime(time, loop());
@@ -122,7 +122,7 @@ LinkState State::getLinkState() {
   return LinkState { beats, phase, tempo };
 }
 
-void State::setTempo(float tempo_) {
+void Engine::setTempo(float tempo_) {
   const auto time = link.clock().micros();
   auto sessionState = link.captureAppSessionState();
   sessionState.setTempo(tempo_, time);
@@ -131,14 +131,14 @@ void State::setTempo(float tempo_) {
 
 // -------------------------------------------------------------------------------------------
 
-void State::startTimeline() {
+void Engine::startTimeline() {
   auto sessionState = link.captureAppSessionState();
   auto now = link.clock().micros();
   sessionState.setIsPlayingAndRequestBeatAtTime(true, now, 0, m_loop);
   link.commitAppSessionState(sessionState);
 }
 
-void State::stopTimeline() {
+void Engine::stopTimeline() {
   auto sessionState = link.captureAppSessionState();
   auto now = link.clock().micros();
   sessionState.setIsPlayingAndRequestBeatAtTime(false, now, 0, m_loop);

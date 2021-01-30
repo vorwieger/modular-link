@@ -6,7 +6,7 @@
 #include <thread>
 #include <bitset>
 
-#include "State.h"
+#include "Engine.h"
 
 class Input {
 
@@ -20,7 +20,7 @@ class Input {
 
   public:
 
-    Input(State& /*state*/);
+    Input(Engine& /*engine*/);
     ~Input();
 
     void playButtonPressed();
@@ -36,7 +36,7 @@ class Input {
 
     static void encoderHandler();
 
-    State& m_state;
+    Engine& m_engine;
     std::thread m_thread;
 
 };
