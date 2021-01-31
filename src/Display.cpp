@@ -24,15 +24,17 @@ void Display::stateChanged() {
       max7219.display(m_engine.tempo());
       break;
     }
-    case PULSE: {
+    case PPQN: {
+      auto ppqn = m_engine.ppqn();
       std::ostringstream oss;
-      oss << (m_engine.pulse() >= 10 ? "Pu" : "Pu ") << m_engine.pulse();
+      oss << (ppqn >= 10 ? "pu" : "pu ") << ppqn;
       max7219.display(oss.str());
       break;
     }
-    case LOOP: {
+    case QUANTUM: {
+      auto quantum = m_engine.quantum();
       std::ostringstream oss;
-      oss << (m_engine.loop() >= 10 ? "Lo" : "Lo ") << m_engine.loop();
+      oss << (quantum >= 10 ? "qn" : "qn ") << quantum;
       max7219.display(oss.str());
       break;
     }

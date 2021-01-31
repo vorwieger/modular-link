@@ -3,6 +3,7 @@
 #include <list>
 #include <mutex>
 #include <ableton/Link.hpp>
+#include "Settings.h"
 
 enum PlayState {
     STOPPED,
@@ -12,8 +13,8 @@ enum PlayState {
 
 enum ViewState {
     TEMPO,
-    PULSE,
-    LOOP
+    PPQN,
+    QUANTUM
 };
 
 class StateObserver {
@@ -22,7 +23,7 @@ class StateObserver {
 };
 
 struct LinkState {
-  const double beats;
+  const double beat;
   const double phase;
   const double tempo;
 };
@@ -32,6 +33,9 @@ class Engine {
   public:
 
       Engine();
+
+      bool running();
+
       LinkState getLinkState();
 
       void registerObserver(StateObserver* /*observer*/);
@@ -45,34 +49,29 @@ class Engine {
       float tempo();
       void setTempo(float /*tempo_*/);
 
-      int loop();
-      void setLoop(int /*loop_*/);
+      int quantum();
+      void setQuantum(int /*quantum_*/);
 
-      int pulse();
-      void setPulse(int /*pulse_*/);
+      int ppqn();
+      void changePpqn(bool /*increase*/);
 
       void startTimeline();
       void stopTimeline();
 
-      bool running();
-
 
   private:
 
-      ableton::Link link;
-
+      std::atomic<Settings> m_settings;
+      std::atomic<bool> m_running;
       std::atomic<ViewState> m_viewState;
       std::atomic<PlayState> m_playState;
-      std::atomic<int> m_loop;
-      std::atomic<int> m_pulse;
-      std::atomic<bool> m_running;
+      
+      ableton::Link link;
 
       std::list<StateObserver*> observers;
       void stateChanged();
 
       std::mutex m_updateViewState;
       std::mutex m_updatePlayState;
-      std::mutex m_updateLoop;
-      std::mutex m_updatePulse;
 
 };

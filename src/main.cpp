@@ -21,7 +21,7 @@ int main(void) {
   Display display(engine);
 
   while (engine.running()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   return 0;

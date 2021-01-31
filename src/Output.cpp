@@ -45,18 +45,17 @@ void Output::setReset(bool high) {
   digitalWrite(Reset, high ? LOW : HIGH); // inverted
 }
 
-void Output::outputClock(double beats, double phase, double tempo, int pulse) {
-  const double secondsPerBeat = 60.0 / tempo;
-
-  // Fractional portion of current beat value
-  double intgarbage;
-  const auto beatFraction = std::modf(beats * pulse, &intgarbage);
-
+void Output::outputClock(LinkState linkState) {
   // Fractional beat value for which clock should be high
+  const double secondsPerBeat = 60.0 / linkState.tempo;
   const auto highFraction = PULSE_LENGTH / secondsPerBeat;
 
-  setReset(phase <= highFraction);
+  // Fractional portion of current beat value
+  double iptr; //ignore integral part
+  const auto beatFraction = std::modf(linkState.beat * m_engine.ppqn(), &iptr);
+
   setClock(beatFraction <= highFraction);
+  setReset(linkState.phase <= highFraction);
 }
 
 // -------------------------------------------------------------------------------------------
@@ -72,17 +71,17 @@ void Output::process() {
         break;
       }
       case CUED: {
-        setPlayIndicator((long)(linkState.beats * 2) % 2 == 0);
+        setPlayIndicator((long)(linkState.beat * 2) % 2 == 0);
         setClock(false);
         setReset(false);
-        if (linkState.beats < 0) {
+        if (linkState.beat < 0) {
           break;
         }
         m_engine.setPlayState(PLAYING);
       }
       case PLAYING: {
         setPlayIndicator(true);
-        outputClock(linkState.beats, linkState.phase, linkState.tempo, m_engine.pulse());
+        outputClock(linkState);
         break;
       }
     }

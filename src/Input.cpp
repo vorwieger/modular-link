@@ -55,14 +55,14 @@ void Input::playButtonPressed() {
 void Input::encoderButtonPressed() {
   switch (m_engine.viewState()) {
     case TEMPO: {
-      m_engine.setViewState(PULSE);
+      m_engine.setViewState(PPQN);
       break;
     }
-    case PULSE: {
-       m_engine.setViewState(LOOP);
+    case PPQN: {
+       m_engine.setViewState(QUANTUM);
       break;
     }
-    case LOOP: {
+    case QUANTUM: {
       m_engine.setViewState(TEMPO);
       break;
     }
@@ -76,12 +76,12 @@ void Input::encoderTurned(bool clockwise) {
       m_engine.setTempo(std::llround(m_engine.tempo() + (clockwise ? step : -step)));
       break;
     }
-    case PULSE: { // change pulse
-      m_engine.setPulse(m_engine.pulse() * (clockwise ? 2 : 0.5));
+    case PPQN: { // change ppqn
+      m_engine.changePpqn(clockwise);
       break;
     }
-    case LOOP: { // change loop
-      m_engine.setLoop(m_engine.loop() + (clockwise ? 1 : -1));
+    case QUANTUM: { // change quantum
+      m_engine.setQuantum(m_engine.quantum() + (clockwise ? 1 : -1));
       break;
     }
   }

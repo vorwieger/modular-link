@@ -78,7 +78,6 @@ void Max7219::display(int value_) {
 
   std::string strValue = std::to_string(static_cast<int>(value_));
   std::string strFill = "";
-  bool showDot = false;
 
   if (strValue.length() < 4) {
     strFill = std::string(4 - strValue.length(), ' ');

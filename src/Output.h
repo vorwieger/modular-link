@@ -34,7 +34,7 @@ private:
   bool m_clockHigh = false;
   bool m_resetHigh = false;
 
-  void outputClock(double /*beats*/, double /*phase*/, double /*tempo*/, int /*pulsesPerBeat*/);
+  void outputClock(LinkState /*linkState*/);
 
   Engine& m_engine;
   std::thread m_thread;
