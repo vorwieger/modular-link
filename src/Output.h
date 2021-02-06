@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <bitset>
 #include <cmath>
@@ -35,8 +36,8 @@ private:
   bool m_resetHigh = false;
 
   void outputClock(LinkState /*linkState*/);
-
+  
   Engine& m_engine;
-  std::thread m_thread;
+  std::unique_ptr<std::thread> m_thread;
 
 };

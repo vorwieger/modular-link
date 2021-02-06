@@ -13,7 +13,6 @@ extern "C" {
 
 int main(void) {
   wiringPiSetup();
-  piHiPri(99);
 
   Engine engine;
   Input input(engine);

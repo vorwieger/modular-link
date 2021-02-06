@@ -1,14 +1,20 @@
 #include "Output.h"
 #include <wiringPi.h>
 
-const double PULSE_LENGTH = 0.02; // seconds
+const double PULSE_LENGTH = 0.01; // seconds
 const auto OUTPUT_THREAD_SLEEP = std::chrono::microseconds(250);
 
 // -------------------------------------------------------------------------------------------
 
 Output::Output(Engine& engine_)
   : m_engine(engine_)
-  , m_thread(&Output::process, this) {
+  , m_thread(std::unique_ptr<std::thread>(new std::thread(&Output::process, this)))
+{
+  sched_param param;
+  param.sched_priority = 99;
+  if(::pthread_setschedparam(m_thread->native_handle(), SCHED_FIFO, &param) < 0) {
+    std::cerr << "Failed to set output thread priority\n";
+  }
 
   pinMode(Clock, OUTPUT);
   pinMode(Reset, OUTPUT);
@@ -20,9 +26,9 @@ Output::Output(Engine& engine_)
 }
 
 Output::~Output() {
-    if (m_thread.joinable()) {
-      m_thread.join();
-    }
+  if (m_thread == nullptr) { return; }
+  m_thread->join();
+  m_thread = nullptr;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -51,8 +57,9 @@ void Output::outputClock(LinkState linkState) {
   const auto highFraction = PULSE_LENGTH / secondsPerBeat;
 
   // Fractional portion of current beat value
+  const auto ppqn = m_engine.ppqn();
   double iptr; //ignore integral part
-  const auto beatFraction = std::modf(linkState.beat * m_engine.ppqn(), &iptr);
+  const auto beatFraction = std::modf(linkState.beat * ppqn, &iptr) / ppqn;
 
   setClock(beatFraction <= highFraction);
   setReset(linkState.phase <= highFraction);
@@ -80,8 +87,8 @@ void Output::process() {
         m_engine.setPlayState(PLAYING);
       }
       case PLAYING: {
-        setPlayIndicator(true);
         outputClock(linkState);
+        setPlayIndicator(true);
         break;
       }
     }

@@ -21,7 +21,6 @@ class Input {
   public:
 
     Input(Engine& /*engine*/);
-    ~Input();
 
     void playButtonPressed();
     void encoderButtonPressed();
@@ -29,14 +28,10 @@ class Input {
 
   private:
 
-    void process();
+    Engine& m_engine;
 
-    bool isPlayButtonPressed();
-    bool isEncoderButtonPressed();
-
+    static void playButtonHandler();
+    static void encoderButtonHandler();
     static void encoderHandler();
 
-    Engine& m_engine;
-    std::thread m_thread;
-
-};
+  };

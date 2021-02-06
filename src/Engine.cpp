@@ -54,8 +54,9 @@ void Engine::stateChanged() {
 LinkState Engine::getLinkState() {
   const auto time = link.clock().micros();
   auto sessionState = link.captureAppSessionState();
-  const double beat = sessionState.beatAtTime(time, quantum());
-  const double phase = sessionState.phaseAtTime(time, quantum());
+  auto settings = m_settings.load();
+  const double beat = sessionState.beatAtTime(time, settings.quantum);
+  const double phase = sessionState.phaseAtTime(time, settings.quantum);
   const double tempo = sessionState.tempo();
   return LinkState { beat, phase, tempo };
 }
